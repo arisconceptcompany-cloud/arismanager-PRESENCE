@@ -152,8 +152,9 @@ app.post('/api/scan-badge', (req, res) => {
   
   const type = (lastPresence && lastPresence.type === 'entrer') ? 'sortie' : 'entrer';
   
-  // Insertion : SQLite utilisera CURRENT_TIMESTAMP (UTC) par défaut
-  db.prepare('INSERT INTO presence (employee_id, type) VALUES (?, ?)').run(employe.id, type);
+  // Insertion avec l'heure locale du serveur
+  const localTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  db.prepare('INSERT INTO presence (employee_id, type, scanned_at) VALUES (?, ?, ?)').run(employe.id, type, localTime);
   
   notificationEmitter.emit('pointage', {
     type: type,
@@ -419,7 +420,8 @@ app.post('/employe-pointage', (req, res) => {
   
   const type = (lastPresence && lastPresence.type === 'entrer') ? 'sortie' : 'entrer';
   
-  db.prepare('INSERT INTO presence (employee_id, type) VALUES (?, ?)').run(employe.id, type);
+  const localTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  db.prepare('INSERT INTO presence (employee_id, type, scanned_at) VALUES (?, ?, ?)').run(employe.id, type, localTime);
   
   notificationEmitter.emit('pointage', {
     type: type,
@@ -899,7 +901,8 @@ app.post('/api/presence', (req, res) => {
     SELECT type FROM presence WHERE employee_id = ? ORDER BY scanned_at DESC LIMIT 1
   `).get(employee.id);
   const nextType = (!last || last.type === 'sortie') ? 'entrer' : 'sortie';
-  db.prepare('INSERT INTO presence (employee_id, type) VALUES (?, ?)').run(employee.id, nextType);
+  const localTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  db.prepare('INSERT INTO presence (employee_id, type, scanned_at) VALUES (?, ?, ?)').run(employee.id, nextType, localTime);
   
   notificationEmitter.emit('pointage', {
     type: nextType,
