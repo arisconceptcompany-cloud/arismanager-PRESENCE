@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Utilisateurs - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="page-employes">
+      <h1>Utilisateurs</h1>
+      <p class="lead">Comptes de connexion. L'utilisateur <strong>scanner</strong> est redirigé vers <a href="/scanner">/scanner</a> après connexion.</p>
+      <a href="/utilisateurs/nouveau" class="btn btn-primary">+ Nouvel utilisateur</a>
+      <section class="card">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Identifiant</th>
+              <th>Rôle</th>
+              <th>Accès</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.forEach(function(u) { %>
+            <tr>
+              <td><strong><%= u.username %></strong></td>
+              <td><span class="badge badge-<%= u.role === 'admin' ? 'success' : 'warning' %>"><%= u.role || 'user' %></span></td>
+              <td><%= u.role === 'scanner' ? '→ Scanner' : 'Tableau de bord' %></td>
+              <td>
+                <a href="/utilisateurs/<%= u.id %>/modifier" class="btn btn-sm">Modifier</a>
+                <% if (u.username !== 'admin') { %>
+                <form action="/utilisateurs/<%= u.id %>/supprimer" method="POST" class="inline-form" style="display:inline;" onsubmit="return confirm('Supprimer cet utilisateur ?');">
+                  <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                </form>
+                <% } %>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+</body>
+</html>

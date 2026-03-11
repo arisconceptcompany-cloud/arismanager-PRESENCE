@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiche <%= fiche.titre %> - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .fiche-container { max-width: 100%; overflow-x: auto; }
+    .fiche-print {
+      min-width: 800px;
+      background: #fff;
+      color: #1a1a1a;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .fiche-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .fiche-header img { height: 48px; }
+    .fiche-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
+    .fiche-period { color: #555; font-size: 0.95rem; }
+    .fiche-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .fiche-table th, .fiche-table td { border: 1px solid #ccc; padding: 6px 4px; text-align: center; }
+    .fiche-table th { background: #f0f0f0; font-weight: 600; }
+    .fiche-table .col-nom { text-align: left; min-width: 140px; }
+    .fiche-table .col-jour { min-width: 28px; max-width: 36px; }
+    .fiche-table input.cell-input { width: 100%; max-width: 32px; border: none; text-align: center; font-size: 11px; }
+    .fiche-table input.cell-input:focus { outline: 1px solid var(--primary, #4da6ff); }
+    .fiche-actions { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .fiche-save-status { font-size: 0.85rem; color: var(--text-muted, #888); }
+    .print-only { display: none; }
+    @media print {
+      body { background: #fff; }
+      .no-print { display: none !important; }
+      .fiche-print { border: none; box-shadow: none; }
+      .fiche-table th, .fiche-table td { border: 1px solid #333; }
+      .cell-input { display: none !important; }
+      .print-only { display: inline !important; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="fiche-container no-print">
+      <div class="fiche-actions no-print" style="margin-bottom: 12px;">
+        <a href="/fiches-presence" class="btn">← Liste des fiches</a>
+        <button type="button" onclick="window.print()" class="btn btn-primary">Imprimer</button>
+        <span class="fiche-save-status" id="save-status">Sauvegarde automatique active</span>
+      </div>
+    </div>
+    <div class="fiche-container">
+      <div class="fiche-print" id="fiche-print">
+        <div class="fiche-header">
+          <div>
+            <img src="/logo.png" alt="PresenceAris">
+            <p class="fiche-period">PresenceAris — Fiche de présence</p>
+          </div>
+          <div>
+            <h2 class="fiche-title"><%= fiche.titre %></h2>
+            <p class="fiche-period"><%= MOIS[fiche.mois - 1] %> <%= fiche.annee %></p>
+          </div>
+        </div>
+        <table class="fiche-table">
+          <thead>
+            <tr>
+              <th class="col-nom">Nom / Prénom</th>
+              <th>Poste</th>
+              <% jours.forEach(function(j) { %><th class="col-jour"><%= j %></th><% }); %>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (employees.length === 0) { %>
+            <tr><td colspan="<%= jours.length + 2 %>" style="text-align:center; padding: 20px;">Aucun employé. <a href="/employes/nouveau">Ajouter des employés</a>.</td></tr>
+            <% } else { %>
+            <% employees.forEach(function(emp) {
+              const key = 'e' + emp.id;
+              const row = typeof donnees[key] === 'object' && donnees[key] !== null ? donnees[key] : {};
+            %>
+            <tr data-employee-id="<%= emp.id %>">
+              <td class="col-nom"><%= emp.nom %> <%= emp.prenom %></td>
+              <td><%= emp.poste || '—' %></td>
+              <% jours.forEach(function(j) {
+                const val = row['j' + j] != null ? row['j' + j] : '';
+              %>
+              <td class="col-jour">
+                <input type="text" class="cell-input no-print" data-employee-id="<%= emp.id %>" data-jour="<%= j %>" value="<%= val %>" placeholder="E/S" maxlength="4" title="Entrée/Sortie ou note">
+                <span class="print-only"><%= val %></span>
+              </td>
+              <% }); %>
+            </tr>
+            <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+  <script>
+    (function() {
+      const ficheId = '<%= fiche.id %>';
+      const employees = <%- JSON.stringify(employees.map(e => e.id)) %>;
+      const jours = <%- JSON.stringify(jours) %>;
+      let data = <%- JSON.stringify(donnees) %>;
+      let saveTimeout = null;
+      const statusEl = document.getElementById('save-status');
+
+      function getData() {
+        const inputs = document.querySelectorAll('.cell-input');
+        const out = {};
+        inputs.forEach(function(inp) {
+          const eid = inp.getAttribute('data-employee-id');
+          const j = inp.getAttribute('data-jour');
+          const key = 'e' + eid;
+          if (!out[key]) out[key] = {};
+          const v = (inp.value || '').trim();
+          if (v) out[key]['j' + j] = v;
+        });
+        return out;
+      }
+
+      function save() {
+        data = getData();
+        fetch('/api/fiches-presence/' + ficheId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ donnees: data })
+        })
+          .then(function(r) { return r.json(); })
+          .then(function() {
+            if (statusEl) { statusEl.textContent = 'Enregistré à ' + new Date().toLocaleTimeString('fr-FR'); }
+          })
+          .catch(function() {
+            if (statusEl) statusEl.textContent = 'Erreur sauvegarde';
+          });
+      }
+
+      function scheduleSave() {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        if (statusEl) statusEl.textContent = 'Sauvegarde…';
+        saveTimeout = setTimeout(function() {
+          save();
+          saveTimeout = null;
+        }, 800);
+      }
+
+      document.querySelectorAll('.cell-input').forEach(function(inp) {
+        inp.addEventListener('input', scheduleSave);
+        inp.addEventListener('change', scheduleSave);
+      });
+
+      document.querySelectorAll('.print-only').forEach(function(el) { el.style.display = 'none'; });
+      window.addEventListener('beforeprint', function() {
+        document.querySelectorAll('td').forEach(function(td) {
+          const inp = td.querySelector('.cell-input');
+          const sp = td.querySelector('.print-only');
+          if (inp && sp) { sp.textContent = inp.value || ''; }
+        });
+      });
+      window.addEventListener('afterprint', function() {
+        document.querySelectorAll('.cell-input').forEach(function(inp) { inp.style.display = ''; });
+        document.querySelectorAll('.print-only').forEach(function(el) { el.style.display = 'none'; });
+      });
+    })();
+  </script>
+</body>
+</html>

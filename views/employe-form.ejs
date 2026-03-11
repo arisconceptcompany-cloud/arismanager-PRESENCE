@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= employee ? 'Modifier' : 'Nouvel employé' %> - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="page-form">
+      <h1><%= employee ? 'Modifier l\'employé' : 'Nouvel employé' %></h1>
+      <form method="POST" action="<%= employee ? '/employes/' + employee.id : '/employes' %>" class="form-card">
+        <label>
+          <span>Nom</span>
+          <input type="text" name="nom" required value="<%= employee ? employee.nom : '' %>">
+        </label>
+        <label>
+          <span>Prénom</span>
+          <input type="text" name="prenom" required value="<%= employee ? employee.prenom : '' %>">
+        </label>
+        <label>
+          <span>Poste</span>
+          <input type="text" name="poste" value="<%= employee ? (employee.poste || '') : '' %>">
+        </label>
+        <label>
+          <span>Département</span>
+          <input type="text" name="departement" value="<%= employee ? (employee.departement || '') : '' %>">
+        </label>
+        <label>
+          <span>Email</span>
+          <input type="email" name="email" value="<%= employee ? (employee.email || '') : '' %>">
+        </label>
+        <label>
+          <span>Adresse (habitation)</span>
+          <input type="text" name="adresse" value="<%= employee ? (employee.adresse || '') : '' %>" placeholder="Ex. Lot II T 104 A lavoloha, Antananarivo 102">
+        </label>
+        <label>
+          <span>Téléphone</span>
+          <input type="text" name="telephone" value="<%= employee ? (employee.telephone || '') : '' %>">
+        </label>
+        <% if (employee) { %>
+        <p class="form-hint">Badge ID : <code><%= employee.badge_id %></code> — QR unique pour la présence</p>
+        <% } %>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <a href="/employes" class="btn">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Badges - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="page-badges">
+      <h1>Badges & QR codes</h1>
+      <p class="lead">Chaque employé possède un badge ID. Scannez le QR code pour enregistrer une entrée ou sortie.</p>
+      <div class="badge-actions-top">
+        <a href="/badge-exemple" class="btn btn-primary" target="_blank">Voir un exemple de badge</a>
+        <% if (employees.length === 0) { %>
+        <form action="/api/seed-employees" method="POST" style="display:inline;" onsubmit="return confirm('Créer les employés de démo (liste ARIS) ?');">
+          <button type="submit" class="btn btn-secondary">Importer les employés de démo</button>
+        </form>
+        <% } %>
+      </div>
+      <div class="badges-grid">
+        <% employees.forEach(function(e) { %>
+        <div class="badge-card card">
+          <div class="badge-qr" data-badge-id="<%= e.badge_id %>">
+            <span class="qr-placeholder">Chargement QR…</span>
+          </div>
+          <div class="badge-info">
+            <strong><%= e.prenom %> <%= e.nom %></strong>
+            <code><%= e.badge_id %></code>
+            <a href="/badge/<%= e.badge_id %>/fiche" class="btn btn-sm" target="_blank">Fiche badge</a>
+            <a href="/badge/<%= e.badge_id %>/badge.pdf" class="btn btn-sm btn-primary" download>Télécharger PDF</a>
+          </div>
+        </div>
+        <% }); %>
+      </div>
+      <% if (employees.length === 0) { %>
+      <p class="lead">Aucun employé pour l’instant. <a href="/employes/nouveau">Ajouter un employé</a> ou cliquer sur <strong>Importer les employés de démo</strong> ci-dessus pour charger la liste type.</p>
+      <% } %>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+  <script src="/js/app.js"></script>
+  <script>
+    document.querySelectorAll('.badge-qr').forEach(function(el) {
+      const badgeId = el.getAttribute('data-badge-id');
+      fetch('/badge/' + encodeURIComponent(badgeId) + '/qr')
+        .then(r => r.json())
+        .then(data => {
+          el.innerHTML = '<img src="' + data.qr + '" alt="QR ' + badgeId + '" width="140" height="140">';
+        })
+        .catch(() => { el.innerHTML = 'Erreur'; });
+    });
+  </script>
+</body>
+</html>

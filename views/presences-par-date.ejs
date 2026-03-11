@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Présences par date - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: #f5f7fa; }
+    .main-header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 15px 30px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { color: white; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 1.5rem; font-weight: bold; }
+    .brand img { width: 40px; height: 40px; border-radius: 50%; }
+    .nav-main { display: flex; gap: 20px; align-items: center; }
+    .nav-main a { color: rgba(255,255,255,0.8); text-decoration: none; transition: 0.3s; }
+    .nav-main a:hover { color: white; }
+    .user-name { color: white; font-weight: bold; }
+    .btn-logout { background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 5px; color: white !important; }
+    .card { background: white; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.1); border: none; margin-bottom: 25px; }
+    .card-header { background: white; border-bottom: 2px solid #f0f0f0; padding: 20px 25px; border-radius: 15px 15px 0 0 !important; font-weight: bold; color: #1e3c72; font-size: 1.1rem; }
+    .card-body { padding: 25px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; border-radius: 15px; padding: 25px; text-align: center; box-shadow: 0 2px 15px rgba(0,0,0,0.1); cursor: pointer; transition: 0.3s; }
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 5px 25px rgba(0,0,0,0.15); }
+    .stat-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 24px; }
+    .stat-icon.green { background: #e8f5e9; color: #388e3c; }
+    .stat-icon.red { background: #ffebee; color: #c62828; }
+    .stat-value { font-size: 36px; font-weight: bold; color: #333; display: block; }
+    .stat-label { color: #666; font-size: 14px; }
+    .badge-entrer { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-weight: 600; }
+    .badge-sortie { background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 20px; font-weight: 600; }
+    .emp-avatar { width: 40px; height: 40px; border-radius: 50%; background: #1e3c72; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .table { margin-bottom: 0; }
+    .table th { border-bottom: 2px solid #f0f0f0; color: #666; font-weight: 600; font-size: 13px; text-transform: uppercase; }
+    .table td { vertical-align: middle; padding: 15px; }
+    .date-input { border-radius: 10px; padding: 10px 15px; border: 2px solid #e0e0e0; }
+    .date-input:focus { border-color: #2a5298; outline: none; }
+    @media (max-width: 768px) { .nav-main { display: none; } .main-header { flex-direction: column; gap: 15px; } }
+  </style>
+</head>
+<body>
+  <%- include('partials/header') %>
+  
+  <main class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2 style="color: #1e3c72;"><i class="fas fa-calendar me-2"></i>Présences par date</h2>
+      <a href="/" class="btn btn-outline-primary"><i class="fas fa-arrow-left me-2"></i>Retour au dashboard</a>
+    </div>
+    
+    <!-- Date Selector -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <form method="GET" action="/presences-par-date" class="d-flex align-items-center gap-3">
+          <label class="form-label mb-0">Sélectionner une date:</label>
+          <input type="date" name="date" value="<%= date %>" class="form-control date-input" style="max-width: 200px;" onchange="this.form.submit()">
+        </form>
+      </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-grid">
+      <a href="/presences-par-date?date=<%= date %>&filter=presents" class="stat-card text-decoration-none <%= filter === 'presents' ? 'border border-success' : '' %>">
+        <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
+        <span class="stat-value"><%= presentToday %></span>
+        <span class="stat-label">Présents</span>
+      </a>
+      <a href="/presences-par-date?date=<%= date %>&filter=sorties" class="stat-card text-decoration-none <%= filter === 'sorties' ? 'border border-warning' : '' %>">
+        <div class="stat-icon" style="background: #fff3e0; color: #f57c00;"><i class="fas fa-sign-out-alt"></i></div>
+        <span class="stat-value"><%= sortieToday || 0 %></span>
+        <span class="stat-label">Sortis</span>
+      </a>
+      <a href="/presences-par-date?date=<%= date %>&filter=absents" class="stat-card text-decoration-none <%= filter === 'absents' ? 'border border-danger' : '' %>">
+        <div class="stat-icon red"><i class="fas fa-user-times"></i></div>
+        <span class="stat-value"><%= absentToday %></span>
+        <span class="stat-label">Absents</span>
+      </a>
+    </div>
+    
+    <!-- Presence/Absent List or Pointages -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <% if (filter === 'presents') { %>
+            <i class="fas fa-user-check me-2"></i>Employés présents (encore sur place)
+          <% } else if (filter === 'sorties') { %>
+            <i class="fas fa-sign-out-alt me-2"></i>Employés partis (ont quitté)
+          <% } else if (filter === 'absents') { %>
+            <i class="fas fa-user-times me-2"></i>Employés absents
+          <% } else { %>
+            <i class="fas fa-list me-2"></i>Pointages du <%= new Date(date).toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}) %>
+          <% } %>
+          <span class="badge bg-primary ms-2"><%= presences.length %></span>
+        </div>
+        <a href="/presences-par-date?date=<%= date %>" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-list me-1"></i> Tous les pointages
+        </a>
+      </div>
+      <div class="card-body p-0">
+        <% if (presences.length === 0) { %>
+        <div class="text-center text-muted py-5">
+          <i class="fas fa-inbox fa-3x mb-3"></i>
+          <p>Aucune donnée pour cette date</p>
+        </div>
+        <% } else { %>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Employé</th>
+              <% if (!filter) { %><th>Type</th><% } %>
+              <% if (!filter) { %><th>Heure</th><% } %>
+              <th>Badge</th>
+              <% if (filter === 'presents' || filter === 'sorties') { %><th>Dernière heure</th><% } %>
+            </tr>
+          </thead>
+          <tbody>
+            <% presences.forEach(function(p) { %>
+            <tr data-scanned-at="<%= p.scanned_at || '' %>">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="emp-avatar me-2"><%= p.prenom.charAt(0) %><%= p.nom.charAt(0) %></div>
+                  <div>
+                    <div style="font-weight: 600;"><%= p.prenom %> <%= p.nom %></div>
+                    <small class="text-muted"><%= p.poste || '' %></small>
+                  </div>
+                </div>
+              </td>
+              <% if (!filter) { %>
+              <td>
+                <span class="<%= p.type === 'entrer' ? 'badge-entrer' : 'badge-sortie' %>">
+                  <i class="fas <%= p.type === 'entrer' ? 'fa-sign-in-alt' : 'fa-sign-out-alt' %> me-1"></i>
+                  <%= p.type === 'entrer' ? 'Entrée' : 'Sortie' %>
+                </span>
+              </td>
+              <td class="time-display"></td>
+              <% } %>
+              <td><code><%= p.badge_id %></code></td>
+              <% if ((filter === 'presents' || filter === 'sorties') && p.scanned_at) { %>
+              <td class="time-display"></td>
+              <% } %>
+            </tr>
+            <%}); %>
+          </tbody>
+        </table>
+        <% } %>
+      </div>
+    </div>
+  </main>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Madagascar timezone (UTC+3)
+    function toMadagascarTime(utcStr) {
+      try {
+        var d = new Date(utcStr.replace(' ', 'T') + 'Z');
+        var h = String(d.getUTCHours() + 1).padStart(2, '0');
+        var m = String(d.getUTCMinutes()).padStart(2, '0');
+        return h + 'h' + m;
+      } catch(e) { return '--'; }
+    }
+    
+    document.querySelectorAll('tr[data-scanned-at]').forEach(function(tr) {
+      var scannedAt = tr.getAttribute('data-scanned-at');
+      tr.querySelectorAll('.time-display').forEach(function(timeEl) {
+        if (scannedAt) {
+          timeEl.textContent = toMadagascarTime(scannedAt);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

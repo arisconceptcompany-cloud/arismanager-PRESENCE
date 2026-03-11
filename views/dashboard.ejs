@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de bord - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content page-dashboard">
+    <h1>Tableau de bord</h1>
+    <p class="lead">Vue d'ensemble en temps réel des présences et des employés.</p>
+
+    <!-- Cartes de stats -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-value"><%= stats.employees %></span>
+        <span class="stat-label">Total employés</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value"><%= stats.todayPresence %></span>
+        <span class="stat-label">Présents aujourd'hui</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value"><%= stats.employees - stats.todayPresence %></span>
+        <span class="stat-label">Absents</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value"><%= stats.lastPresences ? stats.lastPresences.length : 0 %></span>
+        <span class="stat-label">Pointages enregistrés</span>
+      </div>
+    </section>
+
+    <!-- Actions rapides -->
+    <section class="">
+      <h2>Actions rapides</h2>
+      <div class="badge-actions-top">
+        <a href="/employes/nouveau" class="btn btn-primary">+ Nouvel employé</a>
+        <a href="/employes" class="btn btn-secondary">📋 Liste employés</a>
+        <a href="/badges" class="btn btn-secondary">🎟 Générer badges</a>
+        <a href="/presences" class="btn btn-secondary">📅 Historique pointages</a>
+      </div>
+    </section>
+
+    <div class="card" style="margin-top: 24px;">
+      <h2>Derniers pointages</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Employé</th>
+            <th>Type</th>
+            <th>Heure</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!stats.lastPresences || stats.lastPresences.length === 0) { %>
+          <tr><td colspan="3">Aucun pointage récent.</td></tr>
+          <% } else { %>
+          <% stats.lastPresences.forEach(function(p) { %>
+          <tr data-scanned-at="<%= p.scanned_at %>">
+            <td><%= p.prenom %> <%= p.nom %></td>
+            <td>
+              <% if (p.type === 'entrer') { %>
+                <span class="badge badge-success">Entrée</span>
+              <% } else { %>
+                <span class="badge badge-warning">Sortie</span>
+              <% } %>
+            </td>
+            <td class="time-display"></td>
+          </tr>
+          <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Employés récents</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Poste</th>
+            <th>Badge</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (employees && employees.length > 0) { %>
+          <% employees.slice(0, 8).forEach(function(e) { %>
+          <tr>
+            <td><%= e.prenom %> <%= e.nom %></td>
+            <td><%= e.poste || 'Employé' %></td>
+            <td><code><%= e.badge_id %></code></td>
+            <td style="text-align:right;">
+              <a href="/badge/<%= e.badge_id %>/fiche" target="_blank" class="btn btn-sm btn-secondary">Voir badge</a>
+            </td>
+          </tr>
+          <% }); %>
+          <% } else { %>
+          <tr><td colspan="4">Aucun employé enregistré.</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    // Afficher l'heure locale à partir du timestamp SQLite
+    function formatTime(utcStr) {
+      try {
+        var d = new Date(utcStr.replace(' ', 'T') + 'Z');
+        return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch (e) { return '--'; }
+    }
+
+    document.querySelectorAll('tr[data-scanned-at]').forEach(function (tr) {
+      var scannedAt = tr.getAttribute('data-scanned-at');
+      var cell = tr.querySelector('.time-display');
+      if (scannedAt && cell) {
+        cell.textContent = formatTime(scannedAt);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiche de présence - Aris Concept</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .fiche-manuelle { max-width: 100%; margin: 0 auto; background: #fff; color: #1a1a1a; padding: 24px; border-radius: 8px; overflow-x: auto; }
+    .fiche-manuelle-bandeau {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #2c3e50;
+      color: #fff;
+      padding: 14px 20px;
+      margin: -24px -24px 20px -24px;
+      border-radius: 8px 8px 0 0;
+    }
+    .fiche-manuelle-bandeau h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .fiche-manuelle-bandeau .fiche-date {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+    .fiche-manuelle-bandeau select,
+    .fiche-manuelle-bandeau input[type="number"] {
+      padding: 6px 10px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 0.95rem;
+    }
+    .fiche-manuelle-bandeau select option { color: #1a1a1a; }
+    .fiche-manuelle-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      min-width: 500px;
+    }
+    .fiche-manuelle-table th,
+    .fiche-manuelle-table td {
+      border: 1px solid #bdc3c7;
+      padding: 6px 4px;
+      text-align: center;
+    }
+    .fiche-manuelle-table th {
+      background: #34495e;
+      color: #fff;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+    }
+    .fiche-manuelle-table tbody tr:nth-child(even) { background: #ecf0f1; }
+    .fiche-manuelle-table tbody tr:nth-child(odd) { background: #fff; }
+    .fiche-manuelle-table .col-id { width: 40px; }
+    .fiche-manuelle-table .col-nom { text-align: left; min-width: 120px; padding-left: 10px; }
+    .fiche-manuelle-table .col-prenom { text-align: left; min-width: 140px; padding-left: 10px; }
+    .fiche-manuelle-table .col-jour { min-width: 36px; }
+    .fiche-manuelle-table .col-signature { min-width: 70px; }
+    .fiche-manuelle-table td.col-jour,
+    .fiche-manuelle-table td.col-signature { background: #fafafa; }
+    .fiche-manuelle-table tbody tr:nth-child(even) td.col-jour,
+    .fiche-manuelle-table tbody tr:nth-child(even) td.col-signature { background: #e8eaed; }
+    .fiche-actions { margin-bottom: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    @media print {
+      body { background: #fff !important; }
+      .no-print { display: none !important; }
+      .fiche-manuelle { padding: 12px; box-shadow: none; border: 1px solid #ddd; overflow: visible; }
+      .fiche-manuelle-bandeau { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .fiche-manuelle-table th, .fiche-manuelle-table td { border: 1px solid #333; }
+      .fiche-manuelle-table td.col-jour, .fiche-manuelle-table td.col-signature { background: #fff !important; }
+      .fiche-manuelle-table tbody tr:nth-child(even) td.col-jour,
+      .fiche-manuelle-table tbody tr:nth-child(even) td.col-signature { background: #f5f5f5 !important; }
+      @page { size: landscape; }
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="no-print" style="margin-bottom: 12px;">
+      <div class="fiche-actions">
+        <a href="/fiches-presence" class="btn">← Fiches présence</a>
+        <button type="button" onclick="window.print()" class="btn btn-primary">Imprimer</button>
+        <form method="get" action="/fiche-presence-manuelle" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+          <label style="display: flex; align-items: center; gap: 6px;">
+            Mois :
+            <select name="mois" style="padding: 6px 10px; border: 1px solid #333; border-radius: 4px;">
+              <% for (var m = 1; m <= 12; m++) { %>
+              <option value="<%= m %>" <%= m === mois ? 'selected' : '' %>><%= ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][m-1] %></option>
+              <% } %>
+            </select>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px;">
+            Année :
+            <input type="number" name="annee" value="<%= annee %>" min="2024" max="2030" style="padding: 6px 10px; width: 80px; border: 1px solid #333; border-radius: 4px;">
+          </label>
+          <button type="submit" class="btn">Actualiser</button>
+        </form>
+      </div>
+    </div>
+    <div class="fiche-manuelle" id="fiche-print">
+      <div class="fiche-manuelle-bandeau">
+        <h1>📋 Fiche de Présence</h1>
+        <div class="fiche-date">
+          <label>Période :</label>
+          <span id="periode-affichage"><%= moisLabel %></span>
+        </div>
+      </div>
+      <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: #555;"><strong>Employés Aris Concept uniquement — Jours ouvrables (lun–ven)</strong></p>
+      <table class="fiche-manuelle-table">
+        <thead>
+          <tr>
+            <th class="col-id">ID</th>
+            <th class="col-nom">Nom</th>
+            <th class="col-prenom">Prénom</th>
+            <% joursOuvrables.forEach(function(j) { %>
+            <th colspan="2" class="col-jour"><%= j.jour %></th>
+            <% }); %>
+            <th class="col-signature">Signature</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <% joursOuvrables.forEach(function() { %>
+            <th class="col-jour">E</th>
+            <th class="col-jour">S</th>
+            <% }); %>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (employees.length === 0) { %>
+          <tr>
+            <td colspan="<%= joursOuvrables.length * 2 + 4 %>" style="text-align: center; padding: 24px; color: #888;">
+              Aucun employé Aris Concept. <a href="/employes/nouveau">Ajouter des employés</a>.
+            </td>
+          </tr>
+          <% } else { %>
+          <% employees.forEach(function(emp, i) { %>
+          <tr>
+            <td class="col-id"><%= emp.id_affichage || emp.id %></td>
+            <td class="col-nom"><%= emp.nom %></td>
+            <td class="col-prenom"><%= emp.prenom %></td>
+            <% joursOuvrables.forEach(function() { %>
+            <td class="col-jour"></td>
+            <td class="col-jour"></td>
+            <% }); %>
+            <td class="col-signature"></td>
+          </tr>
+          <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+</body>
+</html>

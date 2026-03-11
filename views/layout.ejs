@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' - ' : '' %>PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="main-header">
+    <a href="/" class="brand">
+      <img src="/logo.png" alt="PresenceAris" class="logo-header">
+      <span>PresenceAris</span>
+    </a>
+    <% if (typeof user !== 'undefined' && user && user.userId) { %>
+    <nav class="nav-main">
+      <a href="/">Tableau de bord</a>
+      <a href="/employes">Employés</a>
+      <a href="/badges">Badges</a>
+      <a href="/scanner">Scanner</a>
+      <a href="/presences">Présences</a>
+      <a href="/fiches-presence">Fiches présence</a>
+      <span class="user-name"><%= user.username %></span>
+      <a href="/logout" class="btn-logout">Déconnexion</a>
+    </nav>
+    <% } %>
+  </header>
+  <main class="main-content">
+    <%- body %>
+  </main>
+  <footer class="main-footer">
+    PresenceAris — Gestion des présences © <%= new Date().getFullYear() %>
+  </footer>
+  <script src="/js/app.js"></script>
+  <%- typeof scripts !== 'undefined' ? scripts : '' %>
+</body>
+</html>

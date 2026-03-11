@@ -1,0 +1,188 @@
+<header class="main-header">
+  <a href="/" class="brand">
+    <img src="/logo.png" alt="PresenceAris" class="logo-header">
+    <div class="brand-text">
+      <span class="brand-title">PresenceAris</span>
+      <span class="brand-role">Admin</span>
+    </div>
+    
+  </a>
+  <% if (typeof user !== 'undefined' && user && user.userId) { %>
+  <nav class="nav-main">
+    <a href="/">Tableau de bord</a>
+    <a href="/employes">Employés</a>
+    <a href="/badges">Badges</a>
+    
+    <a href="/presences">Présences</a>
+    <a href="/fiches-presence">Fiches présence</a>
+    <a href="/parametres">Paramètres</a>
+    <% if (user.role === 'admin') { %><a href="/utilisateurs">Utilisateurs</a><% } %>
+    <div class="notification-bell" id="notificationBell">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917z"/>
+      </svg>
+      <span class="notification-badge" id="notifBadge" style="display:none;">0</span>
+      <div class="notification-dropdown" id="notifDropdown">
+        <div class="notif-header">Notifications</div>
+        <div class="notif-list" id="notifList">
+          <div class="notif-empty">Aucune notification</div>
+        </div>
+        <div class="notif-clear">
+          <button id="clearNotifBtn">Tout supprimer</button>
+        </div>
+      </div>
+    </div>
+    
+    <a href="/logout" class="btn-logout">Déconnexion</a>
+  </nav>
+  <% } %>
+</header>
+
+<style>
+.notification-bell {
+  position: relative;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--text);
+}
+.notification-bell:hover { color: var(--primary); }
+.notification-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--danger);
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.notification-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.notification-bell.open .notification-dropdown { display: block; }
+.notif-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.notif-list { padding: 0; margin: 0; }
+.notif-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-entrer { border-left: 3px solid var(--success); }
+.notif-sortie { border-left: 3px solid var(--warning); }
+.notif-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.notif-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.notif-clear {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+.notif-clear button {
+  width: 100%;
+  padding: 8px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.notif-clear button:hover { opacity: 0.9; }
+</style>
+
+<script>
+(function() {
+  var bell = document.getElementById('notificationBell');
+  var dropdown = document.getElementById('notifDropdown');
+  var badge = document.getElementById('notifBadge');
+  var list = document.getElementById('notifList');
+  var notifCount = 0;
+
+  function showToastNotification(message, type) {
+    var notif = document.createElement('div');
+    notif.className = 'toast-notification toast-' + type;
+    notif.innerHTML = message;
+    document.body.appendChild(notif);
+    setTimeout(function() { notif.classList.add('show'); }, 10);
+    setTimeout(function() {
+      notif.classList.remove('show');
+      setTimeout(function() { notif.remove(); }, 300);
+    }, 4000);
+  }
+
+  bell.addEventListener('click', function(e) {
+    e.stopPropagation();
+    bell.classList.toggle('open');
+    if (bell.classList.contains('open')) {
+      fetch('/api/notifications/list')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.length === 0) {
+            list.innerHTML = '<div class="notif-empty">Aucune notification</div>';
+          } else {
+            list.innerHTML = data.map(function(n) {
+              var time = new Date(n.time).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+              var cls = n.type === 'entrer' ? 'notif-entrer' : 'notif-sortie';
+              return '<div class="notif-item ' + cls + '"><div><div>' + n.message + '</div><div class="notif-time">' + time + '</div></div></div>';
+            }).join('');
+          }
+        });
+    }
+  });
+
+  document.addEventListener('click', function() {
+    bell.classList.remove('open');
+  });
+
+  document.getElementById('clearNotifBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    fetch('/api/notifications/clear', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          notifCount = 0;
+          badge.style.display = 'none';
+          list.innerHTML = '<div class="notif-empty">Aucune notification</div>';
+        }
+      });
+  });
+
+  var evtSource = new EventSource('/api/notifications');
+  evtSource.onmessage = function(e) {
+    try {
+      var data = JSON.parse(e.data);
+      notifCount++;
+      badge.textContent = notifCount;
+      badge.style.display = 'flex';
+      showToastNotification(data.message, data.type);
+    } catch(err) {}
+  };
+})();
+</script>

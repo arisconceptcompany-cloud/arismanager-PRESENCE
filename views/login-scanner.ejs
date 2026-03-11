@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanner - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-login">
+  <div class="login-box">
+    <div class="login-brand">
+      <img src="/logo.png" alt="PresenceAris" class="logo-login">
+      <h1>Scanner</h1>
+      <p>Accès direct au scanner de présence</p>
+    </div>
+    <form method="POST" action="/login-scanner" class="login-form">
+      <% if (typeof error === 'string' && error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+      <label>
+        <span>Identifiant</span>
+        <input type="text" name="username" required value="scanner" placeholder="scanner">
+      </label>
+      <label>
+        <span>Mot de passe</span>
+        <input type="password" name="password" required placeholder="scanner123">
+      </label>
+      <button type="submit" class="btn btn-primary btn-block">Accéder au scanner</button>
+    </form>
+    <p class="login-hint"><a href="/login">Connexion complète</a></p>
+  </div>
+</body>
+</html>

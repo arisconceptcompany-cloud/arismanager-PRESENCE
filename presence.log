@@ -1,0 +1,19 @@
+/home/TECH-002/Downloads/PresenceAris.rar; filename="PresenceAris/PresenceAris/node_modules/bindings/bindings.js:121
+        throw e;
+        ^
+
+Error: /home/TECH-002/Downloads/PresenceAris.rar; filename="PresenceAris/PresenceAris/node_modules/better-sqlite3/build/Release/better_sqlite3.node: invalid ELF header
+    at Module._extensions..node (node:internal/modules/cjs/loader:1651:18)
+    at Module.load (node:internal/modules/cjs/loader:1275:32)
+    at Module._load (node:internal/modules/cjs/loader:1096:12)
+    at Module.require (node:internal/modules/cjs/loader:1298:19)
+    at require (node:internal/modules/helpers:182:18)
+    at bindings (/home/TECH-002/Downloads/PresenceAris.rar; filename="PresenceAris/PresenceAris/node_modules/bindings/bindings.js:112:48)
+    at new Database (/home/TECH-002/Downloads/PresenceAris.rar; filename="PresenceAris/PresenceAris/node_modules/better-sqlite3/lib/database.js:48:64)
+    at Object.<anonymous> (/home/TECH-002/Downloads/PresenceAris.rar; filename="PresenceAris/PresenceAris/db.js:4:12)
+    at Module._compile (node:internal/modules/cjs/loader:1529:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1613:10) {
+  code: 'ERR_DLOPEN_FAILED'
+}
+
+Node.js v20.19.4

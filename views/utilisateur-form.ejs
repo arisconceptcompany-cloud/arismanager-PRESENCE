@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof editUser !== 'undefined' && editUser ? 'Modifier' : 'Nouvel utilisateur' %> - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="page-form">
+      <h1><%= typeof editUser !== 'undefined' && editUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur' %></h1>
+      <form method="POST" action="<%= typeof editUser !== 'undefined' && editUser ? '/utilisateurs/' + editUser.id : '/utilisateurs' %>" class="form-card">
+        <label>
+          <span>Identifiant</span>
+          <input type="text" name="username" value="<%= typeof editUser !== 'undefined' && editUser ? editUser.username : '' %>" required <%= typeof editUser !== 'undefined' && editUser ? 'readonly' : '' %> placeholder="scanner, operateur...">
+        </label>
+        <label>
+          <span>Mot de passe</span>
+          <input type="password" name="password" placeholder="<%= typeof editUser !== 'undefined' && editUser ? 'Laisser vide pour conserver' : '••••••••' %>" <%= typeof editUser === 'undefined' || !editUser ? 'required' : '' %>>
+        </label>
+        <label>
+          <span>Rôle</span>
+          <select name="role">
+            <option value="admin" <%= typeof editUser !== 'undefined' && editUser && editUser.role === 'admin' ? 'selected' : '' %>>admin — Tableau de bord complet</option>
+            <option value="scanner" <%= typeof editUser !== 'undefined' && editUser && editUser.role === 'scanner' ? 'selected' : '' %>>scanner — Redirigé vers /scanner</option>
+            <option value="user" <%= typeof editUser !== 'undefined' && editUser && editUser.role === 'user' ? 'selected' : '' %>>user — Tableau de bord</option>
+          </select>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <a href="/utilisateurs" class="btn">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+</body>
+</html>

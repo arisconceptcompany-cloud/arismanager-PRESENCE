@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paramètres - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <h1>Paramètres</h1>
+    <p class="lead">Gérez votre mot de passe et la configuration WhatsApp (CallMeBot).</p>
+
+    <% if (typeof saved !== 'undefined' && saved) { %>
+      <p class="msg-success">Paramètres enregistrés avec succès.</p>
+    <% } %>
+
+    <% if (typeof pwdsaved !== 'undefined' && pwdsaved) { %>
+      <p class="msg-success">Mot de passe modifié avec succès.</p>
+    <% } %>
+
+    <% if (typeof pwderror !== 'undefined' && pwderror) { %>
+      <p class="msg-error"><%= pwderror %></p>
+    <% } %>
+
+    <!-- Changer mot de passe -->
+    <section class="card form-card">
+      <h2>Changer le mot de passe</h2>
+      <form method="POST" action="/parametres/password">
+        <label>
+          <span>Mot de passe actuel</span>
+          <input type="password" name="current_password" required>
+        </label>
+        <label>
+          <span>Nouveau mot de passe</span>
+          <input type="password" name="new_password" required>
+        </label>
+        <label>
+          <span>Confirmer le mot de passe</span>
+          <input type="password" name="confirm_password" required>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Enregistrer le nouveau mot de passe</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- WhatsApp -->
+    <section class="card" style="margin-top: 24px;">
+      <h2>Connexion par WhatsApp (CallMeBot)</h2>
+      <p>Pour recevoir le code de connexion par WhatsApp, configurez votre numéro et la clé API CallMeBot.</p>
+      <ol class="form-hint">
+        <li>Ajoutez le contact <strong>+34 644 66 32 62</strong> (CallMeBot) sur WhatsApp.</li>
+        <li>Envoyez <strong>I allow callmebot to send me messages</strong> à ce contact.</li>
+        <li>Récupérez la <strong>clé API</strong> dans la réponse du bot.</li>
+        <li>Saisissez votre numéro et la clé ci-dessous.</li>
+      </ol>
+      <form method="POST" action="/parametres" style="margin-top: 16px;">
+        <label>
+          <span>Numéro WhatsApp</span>
+          <input type="tel" name="telephone" value="<%= user.telephone || '' %>" placeholder="+261 34 96 856 72" required>
+        </label>
+        <label>
+          <span>Clé API CallMeBot</span>
+          <input type="password" name="callmebot_apikey" placeholder="<%= user.callmebot_apikey ? '•••••••• (laisser vide pour conserver)' : 'Collez la clé reçue par WhatsApp' %>">
+        </label>
+        <p class="form-hint">Laissez vide pour conserver la clé actuelle.</p>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+          <button type="button" class="btn btn-secondary" id="btnTestWhatsApp">Tester l'envoi WhatsApp</button>
+        </div>
+      </form>
+      <div id="waTestAlert" class="form-hint" style="display:none;"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const btn = document.getElementById('btnTestWhatsApp');
+      const alertBox = document.getElementById('waTestAlert');
+      if (!btn || !alertBox) return;
+
+      function show(type, msg) {
+        alertBox.className = (type === 'success') ? 'msg-success' : 'msg-error';
+        alertBox.textContent = msg;
+        alertBox.style.display = '';
+      }
+
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        show('info', 'Envoi du message de test...');
+        try {
+          const res = await fetch('/api/callmebot/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+          });
+          const json = await res.json();
+          if (json && json.ok) show('success', 'Message de test envoyé sur WhatsApp ✅');
+          else show('error', (json && json.error) ? json.error : 'Erreur inconnue');
+        } catch (e) {
+          show('error', 'Erreur réseau. Réessayez.');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

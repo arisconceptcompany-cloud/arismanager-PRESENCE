@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Présences - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="page-presences">
+      <h1>Historique des présences</h1>
+      <div class="d-flex gap-3 mb-3 align-items-center">
+        <form method="GET" action="/presences" class="d-flex gap-2">
+          <input type="date" name="date" value="<%= dateFilter %>" class="form-control">
+          <button type="submit" class="btn btn-primary">Filtrer</button>
+          <% if (dateFilter !== today) { %>
+            <a href="/presences" class="btn btn-secondary">Effacer</a>
+          <% } %>
+        </form>
+        <a href="/api/presences/export<%= dateFilter ? '?date=' + dateFilter : '' %>" class="btn btn-secondary" download>Exporter JSON</a>
+      </div>
+      <% if (dateFilter) { %>
+        <p class="text-muted">Affichage des pointages du <strong><%= dateFilter %></strong></p>
+      <% } %>
+      <section class="card">
+        <%
+          // Regrouper par jour + employé et séparer heures d'entrée/sortie
+          const groups = [];
+          const map = {};
+          presences.forEach(function (p) {
+            const d = new Date(p.scanned_at.replace(' ', 'T') + 'Z');
+            const dateKey = d.toISOString().split('T')[0];
+            const key = dateKey + '|' + p.employee_id;
+            if (!map[key]) {
+              map[key] = {
+                date: dateKey,
+                badge_id: p.badge_id,
+                nom: p.nom,
+                prenom: p.prenom,
+                entrees: [],
+                sorties: [],
+                count: 0
+              };
+              groups.push(map[key]);
+            }
+            const g = map[key];
+            const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            if (p.type === 'entrer') g.entrees.push(timeStr);
+            else if (p.type === 'sortie') g.sorties.push(timeStr);
+            g.count++;
+          });
+        %>
+
+        <div class="presence-list">
+          <% if (groups.length === 0) { %>
+            <p>Aucun pointage enregistré.</p>
+          <% } else { %>
+            <% groups.forEach(function (g) { %>
+              <div class="presence-item">
+                <div class="presence-header">
+                  <div>
+                    <div class="presence-header-main"><%= g.prenom %> <%= g.nom %></div>
+                    <div class="presence-header-sub"><%= g.date %> — Badge <code><%= g.badge_id %></code></div>
+                  </div>
+                  <span class="presence-count-pill"><%= g.count %> pointage(s)</span>
+                </div>
+                <div class="presence-body">
+                  <div class="presence-col presence-col-enter">
+                    <h3>Entrée</h3>
+                    <% if (g.entrees.length === 0) { %>
+                      <span>Aucune entrée</span>
+                    <% } else { %>
+                      <ul>
+                        <% g.entrees.forEach(function (t) { %>
+                          <li><%= t %></li>
+                        <% }); %>
+                      </ul>
+                    <% } %>
+                  </div>
+                  <div class="presence-col presence-col-exit">
+                    <h3>Sortie</h3>
+                    <% if (g.sorties.length === 0) { %>
+                      <span>Aucune sortie</span>
+                    <% } else { %>
+                      <ul>
+                        <% g.sorties.forEach(function (t) { %>
+                          <li><%= t %></li>
+                        <% }); %>
+                      </ul>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+        <% if (totalPages > 1) { %>
+        <div class="pagination">
+          <% if (page > 1) { %>
+          <a href="/presences?page=<%= page - 1 %><%= dateFilter ? '&date=' + dateFilter : '' %>" class="btn btn-sm">← Préc.</a>
+          <% } %>
+          <span>Page <%= page %> / <%= totalPages %> (<%= total %> pointages)</span>
+          <% if (page < totalPages) { %>
+          <a href="/presences?page=<%= page + 1 %><%= dateFilter ? '&date=' + dateFilter : '' %>" class="btn btn-sm">Suiv. →</a>
+          <% } %>
+        </div>
+        <% } %>
+      </section>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employés - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="page-employes">
+      <h1>Employés</h1>
+      <p class="lead">Liste avec QR code généré uniquement à partir de l’ID (id_affichage). Ce QR peut être scanné sur la page Scanner pour enregistrer une entrée/sortie.</p>
+      <a href="/employes/nouveau" class="btn btn-primary">+ Nouvel employé</a>
+      <form action="/api/seed-employees" method="POST" style="display:inline; margin-left:8px;" onsubmit="return confirm('Enregistrer les 9 employés de la liste type ?');">
+        <button type="submit" class="btn btn-secondary">Enregistrer la liste type (9 employés)</button>
+      </form>
+      <form action="/api/import-employees" method="POST" enctype="multipart/form-data" style="display:inline; margin-left:8px;">
+        <input type="file" name="file" accept=".xlsx,.xls" required>
+        <button type="submit" class="btn btn-secondary">Importer depuis Excel (.xlsx)</button>
+      </form>
+      <% if (typeof imported !== 'undefined' && imported !== '') { %>
+      <p class="msg-success">Import réussi : <%= imported %> employé(s) enregistré(s).</p>
+      <% } %>
+      <% if (typeof import_error !== 'undefined' && import_error) { %>
+      <p class="msg-error">Erreur d'import. Vérifiez le fichier (colonnes : ID, NOM, PRENOM, etc.).</p>
+      <% } %>
+      <% if (typeof error !== 'undefined' && error) { %>
+      <p class="msg-error">Erreur lors de l'enregistrement de l'employé. Vérifiez les champs (nom, prénom obligatoires) ou doublon.</p>
+      <% } %>
+      <section class="card">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>QR (ID)</th>
+              <th>ID</th>
+              <th>Badge ID</th>
+              <th>Nom</th>
+              <th>Prénom</th>
+              <th>Poste</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (employees.length === 0) { %>
+            <tr><td colspan="7">Aucun employé. <a href="/employes/nouveau">Ajouter</a> ou exécuter <code>node scripts/seed-employees.js</code></td></tr>
+            <% } else { %>
+            <% employees.forEach(function(e) { %>
+            <tr>
+              <td class="qr-cell">
+                <div class="qr-id-placeholder" data-employee-id="<%= e.id %>" title="QR généré avec l'ID uniquement (<%= e.id_affichage != null ? e.id_affichage : e.badge_id %>)">...</div>
+              </td>
+              <td><%= e.id_affichage != null ? 'ID:' + String(e.id_affichage).padStart(4,'0') : '—' %></td>
+              <td><code><%= e.badge_id %></code></td>
+              <td><%= e.nom %></td>
+              <td><%= e.prenom %></td>
+              <td><%= e.poste || '—' %></td>
+              <td>
+                <a href="/employes/<%= e.id %>/modifier" class="btn btn-sm">Modifier</a>
+                <a href="/badge/<%= e.badge_id %>/fiche" class="btn btn-sm" target="_blank">Badge</a>
+                <form action="/employes/<%= e.id %>/supprimer" method="POST" class="inline-form" onsubmit="return confirm('Supprimer cet employé ?');">
+                  <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                </form>
+              </td>
+            </tr>
+            <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+  <script src="/js/app.js"></script>
+  <script>
+    document.querySelectorAll('.qr-id-placeholder').forEach(function(el) {
+      const empId = el.getAttribute('data-employee-id');
+      fetch('/api/employee/' + empId + '/qr-id').then(function(r) { return r.json(); }).then(function(data) {
+        el.innerHTML = '<img src="' + data.qr + '" alt="QR ID" width="64" height="64" title="ID: ' + (data.id || '') + '">';
+        el.classList.add('qr-id-loaded');
+      }).catch(function() { el.innerHTML = '—'; });
+    });
+  </script>
+  <style>.qr-cell { vertical-align: middle; } .qr-id-placeholder { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #888; } .qr-id-placeholder img { display: block; }</style>
+</body>
+</html>

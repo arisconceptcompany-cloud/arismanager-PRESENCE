@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nouvelle fiche de présence - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="page-form">
+      <h1>Nouvelle fiche de présence</h1>
+      <form method="POST" action="/fiches-presence" class="form-card">
+        <label>
+          <span>Titre (ex. Mars 2026)</span>
+          <input type="text" name="titre" placeholder="<%= MOIS[mois - 1] %> <%= annee %>" value="<%= MOIS[mois - 1] %> <%= annee %>">
+        </label>
+        <label>
+          <span>Mois</span>
+          <select name="mois">
+            <% for (var i = 1; i <= 12; i++) { %>
+            <option value="<%= i %>" <%= i === mois ? 'selected' : '' %>><%= MOIS[i - 1] %></option>
+            <% } %>
+          </select>
+        </label>
+        <label>
+          <span>Année</span>
+          <input type="number" name="annee" min="2020" max="2030" value="<%= annee %>">
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Créer la fiche</button>
+          <a href="/fiches-presence" class="btn">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+  <script src="/js/app.js"></script>
+</body>
+</html>

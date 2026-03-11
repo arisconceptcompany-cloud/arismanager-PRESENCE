@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historique - ARIS Scanner</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: #f5f7fa; }
+    .header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 15px 20px; border-radius: 0 0 20px 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+    .stat-card { background: white; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .stat-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 20px; }
+    .stat-icon.green { background: #e8f5e9; color: #388e3c; }
+    .stat-icon.red { background: #ffebee; color: #c62828; }
+    .stat-icon.blue { background: #e3f2fd; color: #1976d2; }
+    .stat-value { font-size: 28px; font-weight: bold; color: #333; display: block; }
+    .stat-label { color: #666; font-size: 12px; }
+    .card { background: white; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+    .card-header { background: white; border-bottom: 2px solid #f0f0f0; padding: 15px 20px; border-radius: 15px 15px 0 0 !important; font-weight: bold; color: #1e3c72; }
+    .card-body { padding: 20px; }
+    .date-input { border-radius: 10px; padding: 10px 15px; border: 2px solid #e0e0e0; }
+    .date-input:focus { border-color: #2a5298; outline: none; }
+    .scan-item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #f0f0f0; }
+    .scan-item:last-child { border-bottom: none; }
+    .emp-avatar { width: 40px; height: 40px; border-radius: 50%; background: #1e3c72; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; }
+    .badge-entrer { background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 15px; font-weight: 600; font-size: 12px; }
+    .badge-sortie { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 15px; font-weight: 600; font-size: 12px; }
+    .nav-tabs { border-bottom: 2px solid #f0f0f0; }
+    .nav-tabs .nav-link { border: none; color: #666; padding: 12px 20px; }
+    .nav-tabs .nav-link.active { color: #1e3c72; font-weight: bold; border-bottom: 3px solid #1e3c72; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h4><i class="fas fa-history me-2"></i>Historique des pointages</h4>
+        <small>Responsable: <%= user.scanUserName %></small>
+      </div>
+      <a href="/scan" class="btn btn-outline-light btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Retour
+      </a>
+    </div>
+  </div>
+
+  <div class="container mt-4">
+    <!-- Date Selector -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <form method="GET" action="/scan-presences" class="d-flex align-items-center gap-3">
+          <label class="mb-0">Date:</label>
+          <input type="date" name="date" value="<%= date %>" class="form-control date-input" style="max-width: 180px;" onchange="this.form.submit()">
+        </form>
+      </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
+        <span class="stat-value"><%= presentToday %></span>
+        <span class="stat-label">Présents</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-user-times"></i></div>
+        <span class="stat-value"><%= absentToday %></span>
+        <span class="stat-label">Absents</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-qrcode"></i></div>
+        <span class="stat-value"><%= presences.length %></span>
+        <span class="stat-label">Pointages</span>
+      </div>
+    </div>
+    
+    <!-- Presence List -->
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-list me-2"></i>Pointages du <%= new Date(date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'long', year: 'numeric'}) %>
+      </div>
+      <div class="card-body p-0">
+        <% if (presences.length === 0) { %>
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-inbox fa-2x mb-2"></i>
+          <p>Aucun pointage</p>
+        </div>
+        <% } else { %>
+        <% presences.forEach(function(p) { %>
+          <div class="scan-item" data-scanned-at="<%= p.scanned_at %>">
+            <div class="emp-avatar"><%= p.prenom.charAt(0) %><%= p.nom.charAt(0) %></div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600;"><%= p.prenom %> <%= p.nom %></div>
+              <small class="text-muted"><%= p.poste || '' %></small>
+            </div>
+            <div>
+              <span class="<%= p.type === 'entrer' ? 'badge-entrer' : 'badge-sortie' %>">
+                <i class="fas <%= p.type === 'entrer' ? 'fa-sign-in-alt' : 'fa-sign-out-alt' %> me-1"></i>
+                <%= p.type === 'entrer' ? 'Entrée' : 'Sortie' %>
+              </span>
+            </div>
+            <div class="ms-3 text-muted time-display"></div>
+          </div>
+        <% }); %>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Madagascar timezone (UTC+3)
+    function toMadagascarTime(utcStr) {
+      try {
+        var d = new Date(utcStr.replace(' ', 'T') + 'Z');
+        var h = String(d.getUTCHours() + 1).padStart(2, '0');
+        var m = String(d.getUTCMinutes()).padStart(2, '0');
+        return h + 'h' + m;
+      } catch(e) { return '--'; }
+    }
+    
+    document.querySelectorAll('.scan-item').forEach(function(item) {
+      var scannedAt = item.getAttribute('data-scanned-at');
+      var timeEl = item.querySelector('.time-display');
+      if (scannedAt && timeEl) {
+        timeEl.textContent = toMadagascarTime(scannedAt);
+      }
+    });
+  </script>
+</body>
+</html>

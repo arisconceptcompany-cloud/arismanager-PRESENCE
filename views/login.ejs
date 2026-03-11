@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-login">
+  <div class="login-box">
+    <div class="login-brand">
+      <img src="/logo.png" alt="PresenceAris" class="logo-login">
+      <h1>PresenceAris</h1>
+      <p>Gestion des présences</p>
+    </div>
+
+    <div class="login-tabs">
+      <button type="button" class="login-tab active" data-tab="password">Identifiant / Mot de passe</button>
+      <button type="button" class="login-tab" data-tab="whatsapp">Téléphone (WhatsApp)</button>
+    </div>
+
+    <form method="POST" action="/login" class="login-form" id="form-password">
+      <% if (typeof error === 'string' && error && !useOtp) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+      <label>
+        <span>Identifiant</span>
+        <input type="text" name="username" required placeholder="admin">
+      </label>
+      <label>
+        <span>Mot de passe</span>
+        <input type="password" name="password" required placeholder="••••••••">
+      </label>
+      <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+    </form>
+
+    <div class="login-form login-form-whatsapp hidden" id="form-whatsapp">
+      <% if (typeof error === 'string' && error && useOtp) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+      <div id="step-request">
+        <button type="button" id="btn-send-otp" class="btn btn-primary btn-block">Envoyer le code par WhatsApp</button>
+        <p class="login-hint small">Le code sera envoyé sur WhatsApp. Configurer dans Paramètres.</p>
+      </div>
+      <div id="step-verify" class="hidden">
+        <label>
+          <span>Code reçu</span>
+          <input type="text" id="otp-code" placeholder="123456" maxlength="6" pattern="[0-9]*" inputmode="numeric">
+        </label>
+        <button type="button" id="btn-verify" class="btn btn-primary btn-block">Vérifier et se connecter</button>
+        <button type="button" id="btn-back" class="btn btn-secondary">Retour</button>
+      </div>
+    </div>
+
+    <p class="login-hint">Identifiants fournis par l'administrateur.</p>
+    
+  </div>
+
+  <script>
+    (function() {
+      const tabs = document.querySelectorAll('.login-tab');
+      const formPwd = document.getElementById('form-password');
+      const formWa = document.getElementById('form-whatsapp');
+      const stepReq = document.getElementById('step-request');
+      const stepVerify = document.getElementById('step-verify');
+      const otpInput = document.getElementById('otp-code');
+      const btnSend = document.getElementById('btn-send-otp');
+      const btnVerify = document.getElementById('btn-verify');
+      const btnBack = document.getElementById('btn-back');
+
+      function showTab(tab) {
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        formPwd.classList.toggle('hidden', tab === 'whatsapp');
+        formWa.classList.toggle('hidden', tab !== 'whatsapp');
+      }
+
+      tabs.forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+      btnSend.addEventListener('click', function() {
+        btnSend.disabled = true;
+        btnSend.textContent = 'Envoi...';
+        fetch('/api/login-request-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        })
+        .then(r => r.json())
+        .then(data => {
+          btnSend.disabled = false;
+          btnSend.textContent = 'Envoyer le code par WhatsApp';
+          if (data.ok) {
+            stepReq.classList.add('hidden');
+            stepVerify.classList.remove('hidden');
+            otpInput.focus();
+          } else {
+            alert(data.error || 'Erreur d\'envoi');
+          }
+        })
+        .catch(() => {
+          btnSend.disabled = false;
+          btnSend.textContent = 'Envoyer le code par WhatsApp';
+          alert('Erreur réseau');
+        });
+      });
+
+      btnVerify.addEventListener('click', function() {
+        const code = (otpInput.value || '').trim();
+        if (!code || code.length < 4) { alert('Entrez le code reçu'); return; }
+        btnVerify.disabled = true;
+        fetch('/api/login-verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code })
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok && data.redirect) {
+            window.location.href = data.redirect;
+          } else {
+            btnVerify.disabled = false;
+            alert(data.error || 'Code incorrect ou expiré');
+          }
+        })
+        .catch(() => {
+          btnVerify.disabled = false;
+          alert('Erreur réseau');
+        });
+      });
+
+      btnBack.addEventListener('click', function() {
+        stepVerify.classList.add('hidden');
+        stepReq.classList.remove('hidden');
+        otpInput.value = '';
+      });
+    })();
+  </script>
+</body>
+</html>

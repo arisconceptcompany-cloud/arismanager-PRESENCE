@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiches de présence - PresenceAris</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="main-content">
+    <div class="page-fiches">
+      <h1>Fiches de présence</h1>
+      <p class="lead">Fiches imprimables avec sauvegarde automatique. Créez une fiche par mois, modifiez et imprimez.</p>
+      <% if (typeof error !== 'undefined' && error) { %>
+      <p class="msg-error">Erreur lors de la création de la fiche. Renseignez titre, mois et année.</p>
+      <% } %>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+        <a href="/fiches-presence/nouvelle" class="btn btn-primary">+ Nouvelle fiche</a>
+        <a href="/fiche-presence-manuelle" class="btn">Fiche manuelle (Aris Concept)</a>
+      </div>
+      <section class="card">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>Période</th>
+              <th>Modifiée le</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (fiches.length === 0) { %>
+            <tr><td colspan="4">Aucune fiche. <a href="/fiches-presence/nouvelle">Créer une fiche</a></td></tr>
+            <% } else { %>
+            <% fiches.forEach(function(f) { %>
+            <tr>
+              <td><%= f.titre %></td>
+              <td><%= MOIS[f.mois - 1] %> <%= f.annee %></td>
+              <td><%= f.updated_at ? new Date(f.updated_at).toLocaleString('fr-FR') : (f.created_at ? new Date(f.created_at).toLocaleString('fr-FR') : '—') %></td>
+              <td>
+                <a href="/fiches-presence/<%= f.id %>" class="btn btn-sm btn-primary">Ouvrir / Imprimer</a>
+              </td>
+            </tr>
+            <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+  <script src="/js/app.js"></script>
+</body>
+</html>
