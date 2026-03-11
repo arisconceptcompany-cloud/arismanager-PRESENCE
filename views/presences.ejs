@@ -31,7 +31,7 @@
           const groups = [];
           const map = {};
           presences.forEach(function (p) {
-            const d = new Date(p.scanned_at.replace(' ', 'T') + 'Z');
+            const d = new Date(p.scanned_at.replace(' ', 'T'));
             const dateKey = d.toISOString().split('T')[0];
             const key = dateKey + '|' + p.employee_id;
             if (!map[key]) {

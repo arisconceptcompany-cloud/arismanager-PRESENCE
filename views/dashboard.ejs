@@ -111,7 +111,7 @@
     // Afficher l'heure locale à partir du timestamp SQLite
     function formatTime(utcStr) {
       try {
-        var d = new Date(utcStr.replace(' ', 'T') + 'Z');
+        var d = new Date(utcStr.replace(' ', 'T'));
         return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       } catch (e) { return '--'; }
     }
