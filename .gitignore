@@ -1,0 +1,11 @@
+node_modules/
+*.log
+*.db
+*.db-journal
+presence.db
+server.log
+.DS_Store
+.env
+*.pem
+*.key
+*.cert
