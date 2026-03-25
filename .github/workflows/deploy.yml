@@ -35,5 +35,5 @@ jobs:
           script: |
             cd ${{ secrets.SERVER_PATH_ARIS }}
             git pull origin master
-            npm ci --production
+            npm install --omit=dev
             pm2 restart presence-aris || pm2 start server.js --name presence-aris
