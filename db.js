@@ -56,6 +56,35 @@ try { db.exec(`ALTER TABLE employee_users ADD COLUMN is_active INTEGER DEFAULT 1
 try { db.exec(`ALTER TABLE employees ADD COLUMN last_seen DATETIME`); } catch (_) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS projets (id INTEGER PRIMARY KEY AUTOINCREMENT, nom TEXT NOT NULL, description TEXT, client TEXT, date_debut TEXT, date_fin_prevue TEXT, statut TEXT DEFAULT 'en_cours', employes TEXT, created_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`); } catch (_) {}
 try { db.exec(`ALTER TABLE projets ADD COLUMN created_by INTEGER`); } catch (_) {}
+try { db.exec(`ALTER TABLE projets ADD COLUMN fichiers TEXT`); } catch (_) {}
+
+// Chat messages table
+try { 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id INTEGER NOT NULL,
+      sender_type TEXT NOT NULL CHECK(sender_type IN ('admin', 'employee')),
+      receiver_id INTEGER,
+      receiver_type TEXT CHECK(receiver_type IN ('admin', 'employee', 'all')),
+      content TEXT NOT NULL,
+      file_url TEXT,
+      file_name TEXT,
+      file_type TEXT,
+      reply_to_id INTEGER,
+      reply_to_content TEXT,
+      reply_to_sender TEXT,
+      is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sender_id) REFERENCES employees(id)
+    )
+  `); 
+} catch (_) {}
+try { db.exec(`ALTER TABLE chat_messages ADD COLUMN reply_to_id INTEGER`); } catch (_) {}
+try { db.exec(`ALTER TABLE chat_messages ADD COLUMN reply_to_content TEXT`); } catch (_) {}
+try { db.exec(`ALTER TABLE chat_messages ADD COLUMN reply_to_sender TEXT`); } catch (_) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id)`); } catch (_) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id)`); } catch (_) {}
 
 db.exec(`
 

@@ -15,7 +15,9 @@ if (fs.existsSync(envPath)) {
 
 const express = require('express');
 const session = require('express-session');
+const http = require('http');
 const https = require('https');
+const { Server } = require('socket.io');
 const bcrypt = require('bcryptjs');
 const QRCode = require('qrcode');
 const multer = require('multer');
@@ -169,6 +171,39 @@ const uploadPhoto = multer({
       cb(null, true);
     } else {
       cb(new Error('Seules les images sont autorisées'));
+    }
+  }
+});
+
+const PROJETS_DIR = path.join(__dirname, 'projets_fichiers');
+if (!fs.existsSync(PROJETS_DIR)) {
+  fs.mkdirSync(PROJETS_DIR, { recursive: true });
+}
+
+const uploadProjetFile = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, PROJETS_DIR),
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, `projet-${req.body.projet_id || 'new'}-${uniqueSuffix}${ext}`);
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain', 'text/csv'
+    ];
+    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|txt|csv)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Type de fichier non autorisé'));
     }
   }
 });
@@ -2615,6 +2650,158 @@ app.delete('/api/projets/:id', (req, res) => {
   }
 });
 
+try {
+  db.exec("ALTER TABLE projets ADD COLUMN fichiers TEXT DEFAULT '[]'");
+} catch (e) {
+  if (!e.message.includes('duplicate column')) {
+    console.log('Colonne fichiers existe déjà ou erreur:', e.message);
+  }
+}
+
+app.post('/api/projets/:id/upload', (req, res) => {
+  uploadProjetFile.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Upload error:', err);
+      return res.status(400).json({ error: err.message });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier上传é' });
+    }
+    
+    try {
+      const { id } = req.params;
+      const projet = db.prepare('SELECT fichiers FROM projets WHERE id = ?').get(id);
+      
+      if (!projet) {
+        return res.status(404).json({ error: 'Projet non trouvé' });
+      }
+      
+      let fichiers = [];
+      try {
+        fichiers = JSON.parse(projet.fichiers || '[]');
+      } catch (e) {
+        fichiers = [];
+      }
+      
+      const fileInfo = {
+        id: Date.now(),
+        originalName: req.file.originalname,
+        filename: req.file.filename,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        uploadedAt: new Date().toISOString()
+      };
+      
+      fichiers.push(fileInfo);
+      
+      db.prepare('UPDATE projets SET fichiers = ? WHERE id = ?').run(JSON.stringify(fichiers), id);
+      
+      res.json({ ok: true, file: fileInfo, message: 'Fichier上传é avec succès' });
+    } catch (error) {
+      console.error('Error saving file info:', error);
+      res.status(500).json({ error: 'Erreur lors de l\'enregistrement du fichier' });
+    }
+  });
+});
+
+app.get('/api/projets/:id/files', (req, res) => {
+  try {
+    const { id } = req.params;
+    const projet = db.prepare('SELECT fichiers FROM projets WHERE id = ?').get(id);
+    
+    if (!projet) {
+      return res.status(404).json({ error: 'Projet non trouvé' });
+    }
+    
+    let fichiers = [];
+    try {
+      fichiers = JSON.parse(projet.fichiers || '[]');
+    } catch (e) {
+      fichiers = [];
+    }
+    
+    res.json(fichiers);
+  } catch (error) {
+    console.error('Error fetching files:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des fichiers' });
+  }
+});
+
+app.get('/api/projets/:id/download/:fileId', (req, res) => {
+  try {
+    const { id, fileId } = req.params;
+    const projet = db.prepare('SELECT fichiers FROM projets WHERE id = ?').get(id);
+    
+    if (!projet) {
+      return res.status(404).json({ error: 'Projet non trouvé' });
+    }
+    
+    let fichiers = [];
+    try {
+      fichiers = JSON.parse(projet.fichiers || '[]');
+    } catch (e) {
+      fichiers = [];
+    }
+    
+    const fichier = fichiers.find(f => String(f.id) === String(fileId));
+    
+    if (!fichier) {
+      return res.status(404).json({ error: 'Fichier non trouvé' });
+    }
+    
+    const filePath = path.join(PROJETS_DIR, fichier.filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Fichier non trouvé sur le serveur' });
+    }
+    
+    res.download(filePath, fichier.originalName);
+  } catch (error) {
+    console.error('Error downloading file:', error);
+    res.status(500).json({ error: 'Erreur lors du téléchargement du fichier' });
+  }
+});
+
+app.delete('/api/projets/:id/files/:fileId', (req, res) => {
+  try {
+    const { id, fileId } = req.params;
+    const projet = db.prepare('SELECT fichiers FROM projets WHERE id = ?').get(id);
+    
+    if (!projet) {
+      return res.status(404).json({ error: 'Projet non trouvé' });
+    }
+    
+    let fichiers = [];
+    try {
+      fichiers = JSON.parse(projet.fichiers || '[]');
+    } catch (e) {
+      fichiers = [];
+    }
+    
+    const fichierIndex = fichiers.findIndex(f => String(f.id) === String(fileId));
+    
+    if (fichierIndex === -1) {
+      return res.status(404).json({ error: 'Fichier non trouvé' });
+    }
+    
+    const fichier = fichiers[fichierIndex];
+    const filePath = path.join(PROJETS_DIR, fichier.filename);
+    
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    fichiers.splice(fichierIndex, 1);
+    db.prepare('UPDATE projets SET fichiers = ? WHERE id = ?').run(JSON.stringify(fichiers), id);
+    
+    res.json({ ok: true, message: 'Fichier supprimé avec succès' });
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression du fichier' });
+  }
+});
+
 // ---------- Employee Projets API ----------
 app.get('/api/employe/projets/:token', (req, res) => {
   try {
@@ -2734,6 +2921,227 @@ app.delete('/api/employe/projets/:token/:id', (req, res) => {
   }
 });
 
+// ---------- Chat API ----------
+const CHAT_UPLOAD_DIR = path.join(__dirname, 'chat_files');
+if (!fs.existsSync(CHAT_UPLOAD_DIR)) {
+  fs.mkdirSync(CHAT_UPLOAD_DIR, { recursive: true });
+}
+
+const chatUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, CHAT_UPLOAD_DIR),
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, `chat-${uniqueSuffix}${ext}`);
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
+
+// Get all employees for chat list
+app.get('/api/chat/employees', (req, res) => {
+  try {
+    const employees = db.prepare(`
+      SELECT id, badge_id, nom, prenom, poste, photo 
+      FROM employees 
+      ORDER BY prenom, nom
+    `).all();
+    res.json(employees);
+  } catch (error) {
+    console.error('Error fetching employees for chat:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des employés' });
+  }
+});
+
+// Get online users
+app.get('/api/chat/online', (req, res) => {
+  const onlineUsers = [];
+  connectedUsers.forEach((user) => {
+    onlineUsers.push(user);
+  });
+  res.json(onlineUsers);
+});
+
+// Get conversation with a specific user or group
+app.get('/api/chat/messages', (req, res) => {
+  try {
+    const { userId, userType, limit = 50, offset = 0 } = req.query;
+    
+    let query;
+    let params;
+    
+    if (userType === 'admin') {
+      // Admin viewing messages with specific employee or all
+      if (userId) {
+        query = `
+          SELECT m.*, 
+            CASE WHEN m.sender_type = 'employee' THEN e.prenom || ' ' || e.nom ELSE 'Admin' END as sender_name,
+            e.photo as sender_photo
+          FROM chat_messages m
+          LEFT JOIN employees e ON m.sender_id = e.id
+          WHERE (m.sender_id = ? AND m.sender_type = 'employee') 
+             OR (m.receiver_id = ? AND m.receiver_type = 'admin')
+             OR (m.receiver_type = 'all')
+          ORDER BY m.created_at DESC
+          LIMIT ? OFFSET ?
+        `;
+        params = [userId, userId, parseInt(limit), parseInt(offset)];
+      } else {
+        query = `
+          SELECT m.*, 
+            CASE WHEN m.sender_type = 'employee' THEN e.prenom || ' ' || e.nom ELSE 'Admin' END as sender_name,
+            e.photo as sender_photo
+          FROM chat_messages m
+          LEFT JOIN employees e ON m.sender_id = e.id
+          ORDER BY m.created_at DESC
+          LIMIT ? OFFSET ?
+        `;
+        params = [parseInt(limit), parseInt(offset)];
+      }
+    } else {
+      // Employee viewing messages
+      query = `
+        SELECT m.*, 
+          CASE WHEN m.sender_type = 'employee' THEN e.prenom || ' ' || e.nom ELSE 'Admin' END as sender_name,
+          e.photo as sender_photo
+        FROM chat_messages m
+        LEFT JOIN employees e ON m.sender_id = e.id
+        WHERE (m.sender_id = ? AND m.sender_type = 'employee')
+           OR (m.receiver_id = ? AND m.receiver_type = 'employee')
+           OR (m.receiver_type = 'all')
+        ORDER BY m.created_at DESC
+        LIMIT ? OFFSET ?
+      `;
+      params = [userId, userId, parseInt(limit), parseInt(offset)];
+    }
+    
+    const messages = db.prepare(query).all(...params);
+    res.json(messages.reverse());
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des messages' });
+  }
+});
+
+// Get unread message count
+app.get('/api/chat/unread', (req, res) => {
+  try {
+    const { userId, userType } = req.query;
+    
+    const result = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM chat_messages 
+      WHERE receiver_id = ? AND receiver_type = ? AND is_read = 0
+    `).get(userId, userType);
+    
+    res.json({ count: result.count });
+  } catch (error) {
+    console.error('Error fetching unread count:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération' });
+  }
+});
+
+// Send message
+app.post('/api/chat/send', (req, res) => {
+  try {
+    const { senderId, senderType, receiverId, receiverType, content, replyToId, replyToContent, replyToSender } = req.body;
+    
+    if ((!content || content.trim() === '') && !req.file) {
+      return res.status(400).json({ error: 'Message vide' });
+    }
+    
+    const result = db.prepare(`
+      INSERT INTO chat_messages (sender_id, sender_type, receiver_id, receiver_type, content, file_url, file_name, file_type, reply_to_id, reply_to_content, reply_to_sender)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      senderId, 
+      senderType, 
+      receiverId, 
+      receiverType, 
+      content || '', 
+      req.file ? `/chat-files/${req.file.filename}` : null,
+      req.file ? req.file.originalname : null,
+      req.file ? req.file.mimetype : null,
+      replyToId || null,
+      replyToContent || null,
+      replyToSender || null
+    );
+    
+    const message = db.prepare('SELECT * FROM chat_messages WHERE id = ?').get(result.lastInsertRowid);
+    
+    // Emit via Socket.io
+    const io = req.app.get('io');
+    connectedUsers.forEach((user, socketId) => {
+      if (receiverType === 'all' || (user.userId === receiverId && user.userType === receiverType)) {
+        io.to(socketId).emit('new_message', message);
+      }
+    });
+    
+    res.json(message);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'envoi du message' });
+  }
+});
+
+// Upload file for chat
+app.post('/api/chat/upload', chatUpload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Aucun fichier' });
+  }
+  res.json({
+    url: `/chat-files/${req.file.filename}`,
+    name: req.file.originalname,
+    type: req.file.mimetype,
+    size: req.file.size
+  });
+});
+
+// Mark messages as read
+app.post('/api/chat/read', (req, res) => {
+  try {
+    const { messageIds } = req.body;
+    if (!messageIds || !messageIds.length) {
+      return res.json({ success: true });
+    }
+    
+    const placeholders = messageIds.map(() => '?').join(',');
+    db.prepare(`UPDATE chat_messages SET is_read = 1 WHERE id IN (${placeholders})`).run(...messageIds);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking messages read:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour' });
+  }
+});
+
+// Delete message
+app.delete('/api/chat/messages/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const message = db.prepare('SELECT * FROM chat_messages WHERE id = ?').get(id);
+    
+    if (!message) {
+      return res.status(404).json({ error: 'Message non trouvé' });
+    }
+    
+    db.prepare('DELETE FROM chat_messages WHERE id = ?').run(id);
+    
+    // Emit deletion event via Socket.io
+    const io = req.app.get('io');
+    io.emit('message_deleted', { messageId: parseInt(id) });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression' });
+  }
+});
+
+// Serve chat files
+app.use('/chat-files', express.static(CHAT_UPLOAD_DIR));
+
 // ---------- 404 ----------
 app.use((req, res) => {
   res.status(404).send(`
@@ -2757,14 +3165,127 @@ const httpsOptions = {
   cert: fs.readFileSync(path.join(__dirname, 'cert.pem'))
 };
 
-// HTTPS uniquement
+// HTTP server for Socket.io
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: true,
+    credentials: true
+  }
+});
+
+// Socket.io real-time chat
+const connectedUsers = new Map();
+
+io.on('connection', (socket) => {
+  console.log('[CHAT] Client connected:', socket.id);
+  
+  socket.on('register', (data) => {
+    const { userId, userType, userName } = data;
+    connectedUsers.set(socket.id, { userId, userType, userName });
+    socket.userId = userId;
+    socket.userType = userType;
+    socket.userName = userName;
+    console.log('[CHAT] User registered:', userName, '(' + userType + ')');
+    
+    // Broadcast online status
+    io.emit('user_online', { userId, userType, userName, online: true });
+  });
+  
+  socket.on('send_message', (data) => {
+    const { receiverId, receiverType, content, fileUrl, fileName, fileType } = data;
+    const sender = connectedUsers.get(socket.id);
+    
+    if (!sender) return;
+    
+    // Save message to database
+    try {
+      const result = db.prepare(`
+        INSERT INTO chat_messages (sender_id, sender_type, receiver_id, receiver_type, content, file_url, file_name, file_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(sender.userId, sender.userType, receiverId, receiverType, content, fileUrl, fileName, fileType);
+      
+      const message = {
+        id: result.lastInsertRowid,
+        sender_id: sender.userId,
+        sender_type: sender.userType,
+        sender_name: sender.userName,
+        receiver_id: receiverId,
+        receiver_type: receiverType,
+        content,
+        file_url: fileUrl,
+        file_name: fileName,
+        file_type: fileType,
+        created_at: new Date().toISOString(),
+        is_read: 0
+      };
+      
+      // Send to receiver if online
+      connectedUsers.forEach((user, socketId) => {
+        if ((receiverType === 'all' || (user.userId === receiverId && user.userType === receiverType))) {
+          io.to(socketId).emit('new_message', message);
+        }
+      });
+      
+      // Send confirmation to sender
+      socket.emit('message_sent', message);
+      
+      console.log('[CHAT] Message from', sender.userName, 'to', receiverType === 'all' ? 'ALL' : receiverId);
+    } catch (error) {
+      console.error('[CHAT] Error saving message:', error);
+      socket.emit('message_error', { error: 'Failed to send message' });
+    }
+  });
+  
+  socket.on('mark_read', (data) => {
+    const { messageIds } = data;
+    if (!messageIds || !messageIds.length) return;
+    
+    const placeholders = messageIds.map(() => '?').join(',');
+    db.prepare(`UPDATE chat_messages SET is_read = 1 WHERE id IN (${placeholders})`).run(...messageIds);
+    
+    // Notify sender that messages were read
+    socket.emit('messages_read', { messageIds });
+  });
+  
+  socket.on('typing', (data) => {
+    const { receiverId, receiverType } = data;
+    const sender = connectedUsers.get(socket.id);
+    if (!sender) return;
+    
+    connectedUsers.forEach((user, socketId) => {
+      if (receiverType === 'all' || (user.userId === receiverId && user.userType === receiverType)) {
+        io.to(socketId).emit('user_typing', { 
+          userId: sender.userId, 
+          userType: sender.userType, 
+          userName: sender.userName,
+          receiverId,
+          receiverType
+        });
+      }
+    });
+  });
+  
+  socket.on('disconnect', () => {
+    const user = connectedUsers.get(socket.id);
+    if (user) {
+      io.emit('user_offline', { userId: user.userId, userType: user.userType });
+      connectedUsers.delete(socket.id);
+      console.log('[CHAT] User disconnected:', user.userName);
+    }
+  });
+});
+
+// Make io accessible in routes
+app.set('io', io);
+
+// HTTPS uniquement (production)
 https.createServer(httpsOptions, app).listen(PORT, () => {
   console.log('PresenceAris démarré sur https://localhost:' + PORT);
   console.log('Sur le réseau: https://192.168.4.250:' + PORT);
 });
 
-// HTTP pour le développement local (proxy Vite)
-const http = require('http');
-http.createServer(app).listen(3001, () => {
+// HTTP server for development (Vite proxy)
+httpServer.listen(3001, () => {
   console.log('PresenceAris HTTP sur http://localhost:3001');
 });
